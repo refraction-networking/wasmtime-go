@@ -78,7 +78,7 @@ func TestWasiCtx(t *testing.T) {
 	}
 
 	wasiConfig := NewWasiConfig()
-	wasiConfig.InheritStdout()
+	// wasiConfig.InheritStdout()
 	store.SetWasiConfig(wasiConfig)
 	instance, err := linker.Instantiate(store, module)
 	if err != nil {
@@ -130,14 +130,14 @@ func TestWasiCtx(t *testing.T) {
 
 	/// Test#2: WasiCtx.PushFile
 	// Create another file
-	file, err = os.CreateTemp("", "wasi_test")
+	file2, err := os.CreateTemp("", "wasi_test")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(file.Name())
-	t.Logf("Created file %s for WasiCtx.PushFile", file.Name())
+	defer os.Remove(file2.Name())
+	t.Logf("Created file %s for WasiCtx.PushFile", file2.Name())
 
-	fd, err := wasiCtx.PushFile(file, READ_WRITE)
+	fd, err := wasiCtx.PushFile(file2, READ_WRITE)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,7 +148,7 @@ func TestWasiCtx(t *testing.T) {
 		t.Fatal(err)
 	}
 	// read the output
-	out, err = os.ReadFile(file.Name())
+	out, err = os.ReadFile(file2.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
