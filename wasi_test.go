@@ -78,7 +78,7 @@ func TestWasiCtx(t *testing.T) {
 	}
 
 	wasiConfig := NewWasiConfig()
-	wasiConfig.InheritStdout()
+	// wasiConfig.InheritStdout()
 	store.SetWasiConfig(wasiConfig)
 	instance, err := linker.Instantiate(store, module)
 	if err != nil {
@@ -91,7 +91,6 @@ func TestWasiCtx(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// should see "hello world\n" on stdout
 
 	wasiCtx := store.WasiCtx()
 	require.NotNil(t, wasiCtx)
@@ -170,15 +169,6 @@ func TestWasiCtx(t *testing.T) {
 
 	require.Equal(t, "thank you\nthank you\n", string(out))
 	t.Logf("WASI output: %s", string(out))
-
-	err = os.Remove(filename1)
-	if err != nil {
-		t.Logf("Failed to remove %s: %s", filename1, err)
-	}
-	err = os.Remove(file.Name())
-	if err != nil {
-		t.Logf("Failed to remove %s: %s", file.Name(), err)
-	}
 
 	/// Test#4: Store.InsertFile
 	// Create a file

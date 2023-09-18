@@ -183,7 +183,7 @@ func (ctx *WasiCtx) ptr() *C.wasi_ctx_t {
 }
 
 func (ctx *WasiCtx) InsertFile(guestFD uint32, file *os.File, accessMode WasiFileAccessMode) error {
-	err := C.wasi_ctx_insert_file(ctx.ptr(), C.uint32_t(guestFD), unsafe.Pointer(file.Fd()), C.uint32_t(accessMode))
+	err := C.wasi_ctx_insert_file(ctx.ptr(), C.uint32_t(guestFD), C.ulonglong(file.Fd()), C.uint32_t(accessMode))
 	runtime.KeepAlive(ctx)
 	runtime.KeepAlive(file)
 	if err != nil {
@@ -196,7 +196,7 @@ func (ctx *WasiCtx) PushFile(file *os.File, accessMode WasiFileAccessMode) (uint
 	var guestFd uint32
 	c_guest_fd := C.uint32_t(guestFd)
 
-	err := C.wasi_ctx_push_file(ctx.ptr(), unsafe.Pointer(file.Fd()), C.uint32_t(accessMode), &c_guest_fd)
+	err := C.wasi_ctx_push_file(ctx.ptr(), C.ulonglong(file.Fd()), C.uint32_t(accessMode), &c_guest_fd)
 	runtime.KeepAlive(ctx)
 	runtime.KeepAlive(file)
 	if err != nil {

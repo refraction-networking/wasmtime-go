@@ -338,7 +338,7 @@ func (store *Store) WasiCtx() *WasiCtx {
 }
 
 func (store *Store) InsertFile(guestFD uint32, file *os.File, accessMode WasiFileAccessMode) error {
-	err := C.wasmtime_context_insert_file(store.Context(), C.uint32_t(guestFD), unsafe.Pointer(file.Fd()), C.uint32_t(accessMode))
+	err := C.wasmtime_context_insert_file(store.Context(), C.uint32_t(guestFD), C.ulonglong(file.Fd()), C.uint32_t(accessMode))
 	runtime.KeepAlive(store)
 	runtime.KeepAlive(file)
 	if err != nil {
@@ -351,7 +351,7 @@ func (store *Store) PushFile(file *os.File, accessMode WasiFileAccessMode) (uint
 	var guestFd uint32
 	c_guest_fd := C.uint32_t(guestFd)
 
-	err := C.wasmtime_context_push_file(store.Context(), unsafe.Pointer(file.Fd()), C.uint32_t(accessMode), &c_guest_fd)
+	err := C.wasmtime_context_push_file(store.Context(), C.ulonglong(file.Fd()), C.uint32_t(accessMode), &c_guest_fd)
 	runtime.KeepAlive(store)
 	runtime.KeepAlive(file)
 	if err != nil {
