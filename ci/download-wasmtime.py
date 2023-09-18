@@ -1,6 +1,7 @@
 # Helper script to download a precompiled binary of the wasmtime dll for the
 # current platform. Currently always downloads the dev release of wasmtime.
 
+import argparse
 import urllib.request
 import zipfile
 import tarfile
@@ -9,8 +10,7 @@ import os
 import shutil
 import glob
 
-
-version = 'dev'
+version = 'v12.0.2-wasictx'
 urls = [
     ['wasmtime-{}-x86_64-mingw-c-api.zip', 'windows-x86_64'],
     ['wasmtime-{}-x86_64-linux-c-api.tar.xz', 'linux-x86_64'],
@@ -31,7 +31,7 @@ except FileNotFoundError:
 for i, arr in enumerate(urls):
     filename, dirname = arr
     filename = filename.format(version)
-    url = 'https://github.com/bytecodealliance/wasmtime/releases/download/{}/'
+    url = 'https://github.com/refraction-networking/wasmtime/releases/download/{}/'
     url += filename
     url = url.format(version)
     print('Download', url)
