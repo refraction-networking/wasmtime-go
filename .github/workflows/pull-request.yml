@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        go: ['1.18.x', '1.19.x']
+        go: ['1.19.x', '1.20.x', '1.21.x']
     steps:
     - uses: actions/checkout@v2
 
@@ -68,47 +68,12 @@ jobs:
       run: ./ci/test-vendoring.sh
       if: matrix.os != 'windows-latest'
 
-  coverage:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-python@v2
-      with:
-        python-version: 3.8
-    - run: python ci/download-wasmtime.py
-    - uses: actions/setup-go@v2
-      with:
-        go-version: '1.18'
-    - run: go test -coverprofile cover.out ./...
-    - run: go tool cover -html=cover.out -o coverage.html
-    - uses: actions/upload-artifact@v1
-      with:
-        name: coverage
-        path: coverage.html
-
   fmt:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-go@v2
       with:
-        go-version: '1.18'
+        go-version: '1.21'
     # https://stackoverflow.com/questions/42510140/check-format-for-continous-integration
     - run: "diff -u <(echo -n) <(gofmt -d ./)"
-
-  upload_docs:
-    needs: [coverage]
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - uses: actions/download-artifact@v1
-      with:
-        name: coverage
-    - run: find .
-    - name: Push to gh-pages
-      run: curl -LsSf https://git.io/fhJ8n | rustc - && (cd coverage && ../rust_out)
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      env:
-        GITHUB_DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
-        BUILD_REPOSITORY_ID: ${{ github.repository }}
-        BUILD_SOURCEVERSION: ${{ github.sha }}
