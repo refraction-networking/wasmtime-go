@@ -637,7 +637,7 @@ func ExampleWasiConfig() {
 	wasiConfig := wasmtime.NewWasiConfig()
 	wasiConfig.SetStdoutFile(stdoutPath)
 	store := wasmtime.NewStore(engine)
-	store.SetWasi(wasiConfig)
+	store.SetWasiConfig(wasiConfig)
 	instance, err := linker.Instantiate(store, module)
 	if err != nil {
 		log.Fatal(err)

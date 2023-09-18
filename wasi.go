@@ -1,10 +1,12 @@
 package wasmtime
 
 // #include <wasi.h>
+// #include <stdint.h>
 // #include <stdlib.h>
 import "C"
 import (
 	"errors"
+	"os"
 	"runtime"
 	"unsafe"
 )
@@ -147,4 +149,58 @@ func (c *WasiConfig) PreopenDir(path, guestPath string) error {
 	}
 
 	return errors.New("failed to preopen directory")
+}
+
+// FileAccessMode Indicates whether the file-like object being inserted into the
+// WASI configuration (by PushFile and InsertFile) can be used to read, write,
+// or both using bitflags. This seems to be a wasmtime specific mapping as it
+// does not match syscall.O_RDONLY, O_WRONLY, etc.
+type WasiFileAccessMode uint32
+
+const (
+	READ_ONLY WasiFileAccessMode = 1 << iota
+	WRITE_ONLY
+	READ_WRITE = READ_ONLY | WRITE_ONLY
+)
+
+type WasiCtx struct {
+	_ptr *C.wasi_ctx_t
+}
+
+func NewWasiCtx() *WasiCtx {
+	ptr := C.wasi_ctx_new()
+	ctx := &WasiCtx{_ptr: ptr}
+	// runtime.SetFinalizer(ctx, func(ctx *WasiCtx) {
+	// 	C.wasi_ctx_delete(ctx._ptr)
+	// })
+	return ctx
+}
+
+func (ctx *WasiCtx) ptr() *C.wasi_ctx_t {
+	ret := ctx._ptr
+	maybeGC()
+	return ret
+}
+
+func (ctx *WasiCtx) InsertFile(guestFD uint32, file *os.File, accessMode WasiFileAccessMode) error {
+	err := C.wasi_ctx_insert_file(ctx.ptr(), C.uint32_t(guestFD), unsafe.Pointer(file.Fd()), C.uint32_t(accessMode))
+	runtime.KeepAlive(ctx)
+	runtime.KeepAlive(file)
+	if err != nil {
+		return mkError(err)
+	}
+	return nil
+}
+
+func (ctx *WasiCtx) PushFile(file *os.File, accessMode WasiFileAccessMode) (uint32, error) {
+	var guestFd uint32
+	c_guest_fd := C.uint32_t(guestFd)
+
+	err := C.wasi_ctx_push_file(ctx.ptr(), unsafe.Pointer(file.Fd()), C.uint32_t(accessMode), &c_guest_fd)
+	runtime.KeepAlive(ctx)
+	runtime.KeepAlive(file)
+	if err != nil {
+		return 0, mkError(err)
+	}
+	return uint32(c_guest_fd), nil
 }
