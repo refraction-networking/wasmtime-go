@@ -2,8 +2,10 @@ package wasmtime
 
 // #include <wasmtime.h>
 // #include "shims.h"
+// #include <stdint.h>
 import "C"
 import (
+	"os"
 	"reflect"
 	"runtime"
 	"sync"
@@ -97,12 +99,12 @@ func (store *Store) GC() {
 	runtime.KeepAlive(store)
 }
 
-// SetWasi will configure the WASI state to use for instances within this
+// SetWasiConfig will configure the WASI state to use for instances within this
 // `Store`.
 //
 // The `wasi` argument cannot be reused for another `Store`, it's consumed by
 // this function.
-func (store *Store) SetWasi(wasi *WasiConfig) {
+func (store *Store) SetWasiConfig(wasi *WasiConfig) {
 	runtime.SetFinalizer(wasi, nil)
 	ptr := wasi.ptr()
 	wasi._ptr = nil
@@ -306,3 +308,56 @@ func (store *Store) Limiter(
 		C.int64_t(memories),
 	)
 }
+
+/// Refraction-Networking changes begin here
+
+// SetWasiCtx sets the `WasiCtx` within this store.
+//
+// This function should only be combined with `NewWasiCtx()`.
+// If the `WasiCtx` was yield from `(*Store).WasiCtx()` then
+// this function should not be called, in order to prevent
+// unexpected behavior.
+func (store *Store) SetWasiCtx(wasi *WasiCtx) {
+	if wasi == nil {
+		panic("cannot set a nil WasiCtx")
+	}
+
+	C.wasmtime_context_set_wasi_ctx(store.Context(), wasi.ptr())
+	runtime.KeepAlive(store)
+}
+
+// WasiCtx exports the `WasiCtx` within this store.
+//
+// If neither of `SetWasiConfig` or `SetWasiCtx` have been called on this store,
+// this function will create a default `WasiCtx` for the store.
+func (store *Store) WasiCtx() *WasiCtx {
+	C.wasmtime_context_set_default_wasi_if_not_exist(store.Context())
+	ret := C.wasmtime_context_get_wasi_ctx(store.Context())
+	runtime.KeepAlive(store)
+	return &WasiCtx{_ptr: ret}
+}
+
+func (store *Store) InsertFile(guestFD uint32, file *os.File, accessMode WasiFileAccessMode) error {
+	err := C.wasmtime_context_insert_file(store.Context(), C.uint32_t(guestFD), unsafe.Pointer(file.Fd()), C.uint32_t(accessMode))
+	runtime.KeepAlive(store)
+	runtime.KeepAlive(file)
+	if err != nil {
+		return mkError(err)
+	}
+	return nil
+}
+
+func (store *Store) PushFile(file *os.File, accessMode WasiFileAccessMode) (uint32, error) {
+	var guestFd uint32
+	c_guest_fd := C.uint32_t(guestFd)
+
+	err := C.wasmtime_context_push_file(store.Context(), unsafe.Pointer(file.Fd()), C.uint32_t(accessMode), &c_guest_fd)
+	runtime.KeepAlive(store)
+	runtime.KeepAlive(file)
+	if err != nil {
+		return 0, mkError(err)
+	}
+	return uint32(c_guest_fd), nil
+}
+
+/// Refraction-Networking changes end here
