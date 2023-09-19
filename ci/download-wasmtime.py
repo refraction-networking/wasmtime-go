@@ -10,7 +10,7 @@ import os
 import shutil
 import glob
 
-version = 'v12.0.2-wasictx'
+version = 'v12.0.2-uintptr-t'
 urls = [
     ['wasmtime-{}-x86_64-mingw-c-api.zip', 'windows-x86_64'],
     ['wasmtime-{}-x86_64-linux-c-api.tar.xz', 'linux-x86_64'],
