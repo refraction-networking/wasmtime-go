@@ -337,6 +337,14 @@ func (store *Store) WasiCtx() *WasiCtx {
 	return &WasiCtx{_ptr: ret}
 }
 
+// InsertFile inserts a file into the WASI context, it calls to the underlying C-API
+// to invoke Rust's WasiCtx::insert_file method.
+//
+// Safety: this function is unsafe because it does not check for ownership nor does it guarantee
+// memory consistency. It is the caller's responsibility to ensure that the WasiCtx is not
+// currently in use by any other thread. The input file needs to be kept alive as long as the
+// WasiCtx is alive, otherwise the WasiCtx may lose access to the underlying file descriptor
+// in case of garbage collection.
 func (store *Store) InsertFile(guestFD uint32, file *os.File, accessMode WasiFileAccessMode) error {
 	err := C.wasmtime_context_insert_file(store.Context(), C.uint32_t(guestFD), C.uintptr_t(file.Fd()), C.uint32_t(accessMode))
 	runtime.KeepAlive(store)
@@ -347,6 +355,14 @@ func (store *Store) InsertFile(guestFD uint32, file *os.File, accessMode WasiFil
 	return nil
 }
 
+// PushFile pushes a file into the WASI context, it calls to the underlying C-API to invoke
+// Rust's WasiCtx::push_file method.
+//
+// Safety: this function is unsafe because it does not check for ownership nor does it guarantee
+// memory consistency. It is the caller's responsibility to ensure that the WasiCtx is not
+// currently in use by any other thread. The input file needs to be kept alive as long as the
+// WasiCtx is alive, otherwise the WasiCtx may lose access to the underlying file descriptor
+// in case of garbage collection.
 func (store *Store) PushFile(file *os.File, accessMode WasiFileAccessMode) (uint32, error) {
 	var guestFd uint32
 	c_guest_fd := C.uint32_t(guestFd)

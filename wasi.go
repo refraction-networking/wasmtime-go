@@ -167,12 +167,17 @@ type WasiCtx struct {
 	_ptr *C.wasi_ctx_t
 }
 
+// NewWasiCtx creates a new WASI context.
+//
+// This is only for debugging purposes. A typical user should use
+// (*Store).WasiCtx() instead, or directly use WASI functions under
+// Store.
 func NewWasiCtx() *WasiCtx {
 	ptr := C.wasi_ctx_new()
 	ctx := &WasiCtx{_ptr: ptr}
-	// runtime.SetFinalizer(ctx, func(ctx *WasiCtx) {
-	// 	C.wasi_ctx_delete(ctx._ptr)
-	// })
+	runtime.SetFinalizer(ctx, func(ctx *WasiCtx) {
+		runtime.KeepAlive(ctx) // no-op here in place of `C.wasi_ctx_delete` <- TODO
+	})
 	return ctx
 }
 
@@ -182,6 +187,14 @@ func (ctx *WasiCtx) ptr() *C.wasi_ctx_t {
 	return ret
 }
 
+// InsertFile inserts a file into the WASI context, it calls to the underlying C-API
+// to invoke Rust's WasiCtx::insert_file method.
+//
+// Safety: this function is unsafe because it does not check for ownership nor does it guarantee
+// memory consistency. It is the caller's responsibility to ensure that the WasiCtx is not
+// currently in use by any other thread. The input file needs to be kept alive as long as the
+// WasiCtx is alive, otherwise the WasiCtx may lose access to the underlying file descriptor
+// in case of garbage collection.
 func (ctx *WasiCtx) InsertFile(guestFD uint32, file *os.File, accessMode WasiFileAccessMode) error {
 	err := C.wasi_ctx_insert_file(ctx.ptr(), C.uint32_t(guestFD), C.uintptr_t(file.Fd()), C.uint32_t(accessMode))
 	runtime.KeepAlive(ctx)
@@ -192,6 +205,14 @@ func (ctx *WasiCtx) InsertFile(guestFD uint32, file *os.File, accessMode WasiFil
 	return nil
 }
 
+// PushFile pushes a file into the WASI context, it calls to the underlying C-API to invoke
+// Rust's WasiCtx::push_file method.
+//
+// Safety: this function is unsafe because it does not check for ownership nor does it guarantee
+// memory consistency. It is the caller's responsibility to ensure that the WasiCtx is not
+// currently in use by any other thread. The input file needs to be kept alive as long as the
+// WasiCtx is alive, otherwise the WasiCtx may lose access to the underlying file descriptor
+// in case of garbage collection.
 func (ctx *WasiCtx) PushFile(file *os.File, accessMode WasiFileAccessMode) (uint32, error) {
 	var guestFd uint32
 	c_guest_fd := C.uint32_t(guestFd)
