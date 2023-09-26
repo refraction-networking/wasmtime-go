@@ -4,6 +4,7 @@ package wasmtime
 import "C"
 import (
 	"errors"
+	"os"
 	"reflect"
 	"runtime"
 	"unsafe"
@@ -542,4 +543,32 @@ func enterWasm(store Storelike, wasm func(**C.wasm_trap_t) *C.wasmtime_error_t) 
 		return wrappedTrap
 	}
 	return wrappedError
+}
+
+/// Refraction-Networking changes begin here
+
+// SetWasiCtx sets the `WasiCtx` within this store.
+//
+// This function should only be combined with `NewWasiCtx()`.
+// If the `WasiCtx` was yield from `(*Store).WasiCtx()` then
+// this function should not be called, in order to prevent
+// unexpected behavior.
+func (store *Caller) SetWasiCtx(wasi *WasiCtx) {
+	SetWasiCtx(store, wasi)
+}
+
+// WasiCtx exports the `WasiCtx` within this store.
+//
+// If neither of `SetWasiConfig` or `SetWasiCtx` have been called on this store,
+// this function will create a default `WasiCtx` for the store.
+func (store *Caller) WasiCtx() *WasiCtx {
+	return GetWasiCtx(store)
+}
+
+func (store *Caller) InsertFile(guestFD uint32, file *os.File, accessMode WasiFileAccessMode) error {
+	return StoreInsertFile(store, guestFD, file, accessMode)
+}
+
+func (store *Caller) PushFile(file *os.File, accessMode WasiFileAccessMode) (uint32, error) {
+	return StorePushFile(store, file, accessMode)
 }
