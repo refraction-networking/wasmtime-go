@@ -318,6 +318,32 @@ func (store *Store) Limiter(
 // this function should not be called, in order to prevent
 // unexpected behavior.
 func (store *Store) SetWasiCtx(wasi *WasiCtx) {
+	SetWasiCtx(store, wasi)
+}
+
+// WasiCtx exports the `WasiCtx` within this store.
+//
+// If neither of `SetWasiConfig` or `SetWasiCtx` have been called on this store,
+// this function will create a default `WasiCtx` for the store.
+func (store *Store) WasiCtx() *WasiCtx {
+	return GetWasiCtx(store)
+}
+
+func (store *Store) InsertFile(guestFD uint32, file *os.File, accessMode WasiFileAccessMode) error {
+	return StoreInsertFile(store, guestFD, file, accessMode)
+}
+
+func (store *Store) PushFile(file *os.File, accessMode WasiFileAccessMode) (uint32, error) {
+	return StorePushFile(store, file, accessMode)
+}
+
+// SetWasiCtx sets the `WasiCtx` within this store.
+//
+// This function should only be combined with `NewWasiCtx()`.
+// If the `WasiCtx` was yield from `(*Store).WasiCtx()` then
+// this function should not be called, in order to prevent
+// unexpected behavior.
+func SetWasiCtx(store Storelike, wasi *WasiCtx) {
 	if wasi == nil {
 		panic("cannot set a nil WasiCtx")
 	}
@@ -326,18 +352,18 @@ func (store *Store) SetWasiCtx(wasi *WasiCtx) {
 	runtime.KeepAlive(store)
 }
 
-// WasiCtx exports the `WasiCtx` within this store.
+// GetWasiCtx exports the `WasiCtx` within this store.
 //
 // If neither of `SetWasiConfig` or `SetWasiCtx` have been called on this store,
 // this function will create a default `WasiCtx` for the store.
-func (store *Store) WasiCtx() *WasiCtx {
+func GetWasiCtx(store Storelike) *WasiCtx {
 	C.wasmtime_context_set_default_wasi_if_not_exist(store.Context())
 	ret := C.wasmtime_context_get_wasi_ctx(store.Context())
 	runtime.KeepAlive(store)
 	return &WasiCtx{_ptr: ret}
 }
 
-func (store *Store) InsertFile(guestFD uint32, file *os.File, accessMode WasiFileAccessMode) error {
+func StoreInsertFile(store Storelike, guestFD uint32, file *os.File, accessMode WasiFileAccessMode) error {
 	err := C.wasmtime_context_insert_file(store.Context(), C.uint32_t(guestFD), C.uintptr_t(file.Fd()), C.uint32_t(accessMode))
 	runtime.KeepAlive(store)
 	runtime.KeepAlive(file)
@@ -347,7 +373,7 @@ func (store *Store) InsertFile(guestFD uint32, file *os.File, accessMode WasiFil
 	return nil
 }
 
-func (store *Store) PushFile(file *os.File, accessMode WasiFileAccessMode) (uint32, error) {
+func StorePushFile(store Storelike, file *os.File, accessMode WasiFileAccessMode) (uint32, error) {
 	var guestFd uint32
 	c_guest_fd := C.uint32_t(guestFd)
 
